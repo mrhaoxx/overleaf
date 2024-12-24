@@ -261,6 +261,9 @@ module.exports = {
     notifications: {
       url: `http://${process.env.NOTIFICATIONS_HOST || '127.0.0.1'}:3042`,
     },
+    references: {
+      url: `http://${process.env.REFERENCES_HOST || 'localhost'}:3006`,
+    },
     webpack: {
       url: `http://${process.env.WEBPACK_HOST || '127.0.0.1'}:3808`,
     },
@@ -759,7 +762,7 @@ module.exports = {
     right_footer: [
       {
         text: "<i class='fa fa-github-square'></i> Fork on GitHub!",
-        url: 'https://github.com/overleaf/overleaf',
+        url: 'https://github.com/mrhaoxx/overleaf',
       },
     ],
 

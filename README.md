@@ -1,3 +1,10 @@
+## About This Fork
+
+This fork is developed and maintained by [mrhaoxx](https://github.com/mrhaoxx). 
+
+
+This fork is based on the [Overleaf Community Edition](https://github.com/overleaf/overleaf) and PKU LCPU CLUB's [Overleaf Community Edition](https://github.com/lcpu-club/overleaf). The main goal of this fork is to provide a more controlled version of Overleaf Community Edition for my own use.
+
 <h1 align="center">
   <br>
   <a href="https://www.overleaf.com"><img src="doc/logo.png" alt="Overleaf" width="300"></a>
