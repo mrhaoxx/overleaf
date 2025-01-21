@@ -5,11 +5,7 @@ import useScopeEventEmitter from '../../../shared/hooks/use-scope-event-emitter'
 import useEventListener from '../../../shared/hooks/use-event-listener'
 import useScopeEventListener from '../../../shared/hooks/use-scope-event-listener'
 import { createExtensions } from '../extensions'
-import {
-  lineHeights,
-  setEditorTheme,
-  setOptionsTheme,
-} from '../extensions/theme'
+import { setEditorTheme, setOptionsTheme } from '../extensions/theme'
 import {
   restoreCursorPosition,
   setCursorLineAndScroll,
@@ -33,12 +29,7 @@ import { setAutoPair } from '../extensions/auto-pair'
 import { setAutoComplete } from '../extensions/auto-complete'
 import { usePhrases } from './use-phrases'
 import { setPhrases } from '../extensions/phrases'
-import {
-  addLearnedWord,
-  removeLearnedWord,
-  resetLearnedWords,
-  setSpellCheckLanguage,
-} from '../extensions/spelling'
+import { setSpellCheckLanguage } from '../extensions/spelling'
 import {
   createChangeManager,
   dispatchEditorEvent,
@@ -52,7 +43,7 @@ import { setVisual } from '../extensions/visual/visual'
 import { useFileTreePathContext } from '@/features/file-tree/contexts/file-tree-path'
 import { useUserSettingsContext } from '@/shared/context/user-settings-context'
 import { setDocName } from '@/features/source-editor/extensions/doc-name'
-import isValidTexFile from '@/main/is-valid-tex-file'
+import { isValidTeXFile } from '@/main/is-valid-tex-file'
 import { captureException } from '@/infrastructure/error-reporter'
 import grammarlyExtensionPresent from '@/shared/utils/grammarly'
 import { DocumentContainer } from '@/features/ide-react/editor/document-container'
@@ -68,6 +59,7 @@ import { useThreadsContext } from '@/features/review-panel-new/context/threads-c
 import { useHunspell } from '@/features/source-editor/hooks/use-hunspell'
 import { isBootstrap5 } from '@/features/utils/bootstrap-5'
 import { Permissions } from '@/features/ide-react/types/permissions'
+import { lineHeights } from '@/shared/utils/styles'
 
 function useCodeMirrorScope(view: EditorView) {
   const { fileTreeData } = useFileTreeData()
@@ -293,7 +285,7 @@ function useCodeMirrorScope(view: EditorView) {
 
   const { previewByPath } = useFileTreePathContext()
 
-  const showVisual = visual && isValidTexFile(docName)
+  const showVisual = visual && isValidTeXFile(docName)
 
   const visualRef = useRef({
     previewByPath,
@@ -565,39 +557,6 @@ function useCodeMirrorScope(view: EditorView) {
       })
     }
   }, [view, cursorHighlights, currentDoc])
-
-  const handleAddLearnedWords = useCallback(
-    (event: CustomEvent<string>) => {
-      // If the word addition is from adding the word to the dictionary via the
-      // editor, there will be a transaction running now so wait for that to
-      // finish before starting a new one
-      window.setTimeout(() => {
-        view.dispatch(addLearnedWord(spellCheckLanguage, event.detail))
-      }, 0)
-    },
-    [spellCheckLanguage, view]
-  )
-
-  useEventListener('learnedWords:add', handleAddLearnedWords)
-
-  const handleRemoveLearnedWords = useCallback(
-    (event: CustomEvent<string>) => {
-      window.setTimeout(() => {
-        view.dispatch(removeLearnedWord(spellCheckLanguage, event.detail))
-      })
-    },
-    [spellCheckLanguage, view]
-  )
-
-  useEventListener('learnedWords:remove', handleRemoveLearnedWords)
-
-  const handleResetLearnedWords = useCallback(() => {
-    window.setTimeout(() => {
-      view.dispatch(resetLearnedWords())
-    })
-  }, [view])
-
-  useEventListener('learnedWords:reset', handleResetLearnedWords)
 
   useEventListener(
     'editor:focus',

@@ -333,6 +333,7 @@ const _ProjectController = {
     const splitTests = [
       !anonymous && 'bib-file-tpr-prompt',
       'compile-log-events',
+      'full-project-search',
       'math-preview',
       'null-test-share-modal',
       'paywall-cta',
@@ -340,7 +341,6 @@ const _ProjectController = {
       'pdf-caching-mode',
       'pdf-caching-prefetch-large',
       'pdf-caching-prefetching',
-      'pdf-presentation-mode',
       'revert-file',
       'revert-project',
       'review-panel-redesign',
@@ -354,6 +354,7 @@ const _ProjectController = {
       'ai-add-on',
       'reviewer-role',
       'papers-integration',
+      'editor-redesign',
     ].filter(Boolean)
 
     const getUserValues = async userId =>
@@ -483,7 +484,11 @@ const _ProjectController = {
           anonRequestToken
         )
 
-      const [linkSharingChanges, linkSharingEnforcement] = await Promise.all([
+      const [
+        linkSharingChanges,
+        linkSharingEnforcement,
+        reviewerRoleAssignment,
+      ] = await Promise.all([
         SplitTestHandler.promises.getAssignmentForUser(
           project.owner_ref,
           'link-sharing-warning'
@@ -491,6 +496,10 @@ const _ProjectController = {
         SplitTestHandler.promises.getAssignmentForUser(
           project.owner_ref,
           'link-sharing-enforcement'
+        ),
+        SplitTestHandler.promises.getAssignmentForUser(
+          project.owner_ref,
+          'reviewer-role'
         ),
       ])
 
@@ -663,10 +672,13 @@ const _ProjectController = {
 
       const hasNonRecurlySubscription =
         subscription && !subscription.recurlySubscription_id
+      const hasManuallyCollectedSubscription =
+        subscription?.collectionMethod === 'manual'
       const canUseErrorAssistant =
         user.features?.aiErrorAssistant ||
         (splitTestAssignments['ai-add-on']?.variant === 'enabled' &&
-          !hasNonRecurlySubscription)
+          !hasNonRecurlySubscription &&
+          !hasManuallyCollectedSubscription)
 
       let featureUsage = {}
 
@@ -791,6 +803,9 @@ const _ProjectController = {
           isInvitedMember
         ),
         chatEnabled: Features.hasFeature('chat'),
+        projectHistoryBlobsEnabled: Features.hasFeature(
+          'project-history-blobs'
+        ),
         roMirrorOnClientNoLocalStorage:
           Settings.adminOnlyLogin || project.name.startsWith('Debug: '),
         languages: Settings.languages,
@@ -828,8 +843,7 @@ const _ProjectController = {
         isSaas: Features.hasFeature('saas'),
         shouldLoadHotjar: splitTestAssignments.hotjar?.variant === 'enabled',
         isReviewerRoleEnabled:
-          (privilegeLevel === PrivilegeLevels.OWNER &&
-            splitTestAssignments['reviewer-role']?.variant === 'enabled') ||
+          reviewerRoleAssignment?.variant === 'enabled' ||
           Object.keys(project.reviewer_refs || {}).length > 0,
       })
       timer.done()
