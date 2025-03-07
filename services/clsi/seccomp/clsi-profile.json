@@ -839,17 +839,7 @@
           "args": []
         },
         {
-          "name": "epoll_create1",
-          "action": "SCMP_ACT_ALLOW",
-          "args": []
-        },
-        {
           "name": "poll",
-          "action": "SCMP_ACT_ALLOW",
-          "args": []
-        },
-        {
-          "name": "rseq",
           "action": "SCMP_ACT_ALLOW",
           "args": []
         }
