@@ -25,8 +25,6 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
       unattended-upgrades \
       build-essential wget net-tools unzip time imagemagick optipng strace nginx git python3 python-is-python3 zlib1g-dev libpcre3-dev gettext-base libwww-perl ca-certificates curl gnupg \
       qpdf \
-      aspell aspell-en aspell-af aspell-am aspell-ar aspell-ar-large aspell-bg aspell-bn aspell-br aspell-ca aspell-cs aspell-cy aspell-da aspell-de aspell-de-1901 aspell-el aspell-eo aspell-es aspell-et aspell-eu-es aspell-fa aspell-fo aspell-fr aspell-ga aspell-gl-minimos aspell-gu aspell-he aspell-hi aspell-hr aspell-hsb aspell-hu aspell-hy aspell-id aspell-is aspell-it aspell-kk aspell-kn aspell-ku aspell-lt aspell-lv aspell-ml aspell-mr aspell-nl aspell-no aspell-nr aspell-ns  aspell-pa aspell-pl aspell-pt aspell-pt-br aspell-ro aspell-ru aspell-sk aspell-sl aspell-ss aspell-st aspell-sv aspell-tl aspell-tn aspell-ts aspell-uk aspell-uz aspell-xh aspell-zu \
-      python3-pygments fonts-noto \
 # upgrade base-image, batch all the upgrades together, rather than installing them on-by-one (which is slow!)
 &&  unattended-upgrade --verbose --no-minimal-upgrade-steps \
 # install Node.js https://github.com/nodesource/distributions#nodejs
@@ -68,27 +66,19 @@ RUN mkdir /install-tl-unx \
 &&  echo "tlpdbopt_install_docfiles 0" >> /install-tl-unx/texlive.profile \
 &&  echo "tlpdbopt_install_srcfiles 0" >> /install-tl-unx/texlive.profile \
 &&  echo "selected_scheme scheme-full" >> /install-tl-unx/texlive.profile \
-&&  echo "tlpdbopt_sys_bin /usr/bin" >> /install-tl-unx/texlive.profile \
     \
 &&  /install-tl-unx/install-tl \
       -profile /install-tl-unx/texlive.profile \
       -repository ${TEXLIVE_MIRROR} \
     \
 &&  $(find /usr/local/texlive -name tlmgr) path add \
-#&&  tlmgr option repository ${TEXLIVE_MIRROR} \
-#&&  tlmgr update --self \
-#&&  tlmgr install scheme-full \
-#&&  tlmgr path add \
+&&  tlmgr path add \
 &&  rm -rf /install-tl-unx
 
-# Copy default latexmkrc
-# -----------------------
-COPY server-ce/config/latexmkrc /usr/local/share/latexmk/LatexMk
-
 # Install fonts
-# --------------------------
+# -------------
 COPY fonts/. /usr/local/share/fonts/
-RUN fc-cache -f -v
+RUN ln -s /usr/local/texlive/${TEXLIVE_VERSION}/texmf-var/fonts/conf/texlive-fontconfig.conf /etc/fonts/conf.d/09-texlive-fonts.conf &&  fc-cache -f -v
 
 # Set up overleaf user and home directory
 # -----------------------------------------
@@ -100,6 +90,19 @@ RUN adduser --system --group --home /overleaf --no-create-home overleaf && \
 	mkdir -p /var/lib/overleaf/data/template_files && \
 	chown www-data:www-data /var/lib/overleaf/data/template_files
 
-# Add Inkscape for svg support
+# Copy Latexmkrc
+# --------------
+COPY server-ce/config/latexmkrc /usr/local/share/latexmk/LatexMk
 
-RUN add-apt-repository universe && add-apt-repository ppa:inkscape.dev/stable && apt-get update && apt install -y inkscape
+# Install extra packages
+# ----------------------
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked true \
+    apt-get update && \
+    apt-get install -y --no-install-recommends inkscape lilypond python3-pygments aspell aspell-\*
+
+# Enable shell-escape by default
+# ------------------------------
+RUN TEXLIVE_FOLDER=$(find /usr/local/texlive/ -type d -name '20*') \
+    && echo % enable shell-escape by default >> /$TEXLIVE_FOLDER/texmf.cnf \
+    && echo shell_escape = t >> /$TEXLIVE_FOLDER/texmf.cnf
