@@ -12,7 +12,15 @@ env:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [amd64, arm64]
+        include:
+          - platform: amd64
+            runner: ubuntu-latest
+          - platform: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: write
@@ -59,7 +67,7 @@ jobs:
           push: true
           context: ${{ github.workspace }}
           file: ${{ github.workspace }}/server-ce/Dockerfile
-          #platforms: linux/amd64
+          platforms: linux/${{ matrix.platform }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: |
