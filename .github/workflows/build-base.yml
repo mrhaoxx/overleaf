@@ -14,8 +14,8 @@ on:
         default: false
         type: boolean
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: lcpu-club/sharelatex-base
+  REGISTRY: ${{ env.REGISTRY }}
+  IMAGE_NAME: ${{ env.IMAGE_NAME }}
 
 jobs:
   build-and-push:
@@ -74,13 +74,13 @@ jobs:
           file: ${{ github.workspace }}/server-ce/Dockerfile-base
           platforms: linux/${{ matrix.platform }}    
           tags: |
-            ghcr.io/lcpu-club/sharelatex-base:${{ matrix.version }}-${{ matrix.platform }}
-            ghcr.io/lcpu-club/sharelatex-base:${{ matrix.version }}.${{ inputs.revision }}-${{ matrix.platform }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}-${{ matrix.platform }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}.${{ inputs.revision }}-${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: |
-            type=registry,ref=ghcr.io/lcpu-club/sharelatex-base:${{ matrix.version }}.${{ inputs.revision }}-${{ matrix.platform }}
-            type=registry,ref=ghcr.io/lcpu-club/sharelatex-base:${{ matrix.version }}-${{ matrix.platform }}
-            type=registry,ref=ghcr.io/lcpu-club/sharelatex-base:latest-${{ matrix.platform }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}.${{ inputs.revision }}-${{ matrix.platform }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}-${{ matrix.platform }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-${{ matrix.platform }}
           cache-to: type=inline
       - name: Build and push
         if: ${{ matrix.version != 'latest' && ! inputs.cache }}
@@ -95,8 +95,8 @@ jobs:
           file: ${{ github.workspace }}/server-ce/Dockerfile-base
           platforms: linux/${{ matrix.platform }}    
           tags: |
-            ghcr.io/lcpu-club/sharelatex-base:${{ matrix.version }}-${{ matrix.platform }}
-            ghcr.io/lcpu-club/sharelatex-base:${{ matrix.version }}.${{ inputs.revision }}-${{ matrix.platform }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}-${{ matrix.platform }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}.${{ inputs.revision }}-${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-to: type=inline
       - name: Get current year
@@ -116,14 +116,14 @@ jobs:
           file: ${{ github.workspace }}/server-ce/Dockerfile-base
           platforms: linux/${{ matrix.platform }}  
           tags: |
-            ghcr.io/lcpu-club/sharelatex-base:latest-${{ matrix.platform }}
-            ghcr.io/lcpu-club/sharelatex-base:${{ steps.date.outputs.year }}.${{ inputs.revision }}-${{ matrix.platform }}
-            ghcr.io/lcpu-club/sharelatex-base:${{ steps.date.outputs.year }}-${{ matrix.platform }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-${{ matrix.platform }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.date.outputs.year }}.${{ inputs.revision }}-${{ matrix.platform }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.date.outputs.year }}-${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: |
-            type=registry,ref=ghcr.io/lcpu-club/sharelatex-base:${{ steps.date.outputs.year }}.${{ inputs.revision }}-${{ matrix.platform }}
-            type=registry,ref=ghcr.io/lcpu-club/sharelatex-base:${{ steps.date.outputs.year }}-${{ matrix.platform }}
-            type=registry,ref=ghcr.io/lcpu-club/sharelatex-base:latest-${{ matrix.platform }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.date.outputs.year }}.${{ inputs.revision }}-${{ matrix.platform }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.date.outputs.year }}-${{ matrix.platform }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-${{ matrix.platform }}
           cache-to: type=inline
       - name: Build and push
         if: ${{ matrix.version == 'latest' && !inputs.cache }}
@@ -138,9 +138,9 @@ jobs:
           file: ${{ github.workspace }}/server-ce/Dockerfile-base
           platforms: linux/${{ matrix.platform }}  
           tags: |
-            ghcr.io/lcpu-club/sharelatex-base:latest-${{ matrix.platform }}
-            ghcr.io/lcpu-club/sharelatex-base:${{ steps.date.outputs.year }}.${{ inputs.revision }}-${{ matrix.platform }}
-            ghcr.io/lcpu-club/sharelatex-base:${{ steps.date.outputs.year }}-${{ matrix.platform }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-${{ matrix.platform }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.date.outputs.year }}.${{ inputs.revision }}-${{ matrix.platform }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.date.outputs.year }}-${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-to: type=inline
 
