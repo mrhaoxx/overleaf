@@ -12,6 +12,16 @@ ENV TEXMFVAR=/var/lib/overleaf/tmp/texmf-var
 # ------------------------------------------
 ENV REBUILT_AFTER="2024-07-09"
 
+# Set up overleaf user and home directory
+# -----------------------------------------
+RUN adduser --system --group --home /overleaf --no-create-home overleaf && \
+	mkdir -p /var/lib/overleaf && \
+	chown www-data:www-data /var/lib/overleaf && \
+	mkdir -p /var/log/overleaf && \
+	chown www-data:www-data /var/log/overleaf && \
+	mkdir -p /var/lib/overleaf/data/template_files && \
+	chown www-data:www-data /var/lib/overleaf/data/template_files
+
 # Install dependencies
 # --------------------
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
@@ -27,6 +37,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
       qpdf \
 # upgrade base-image, batch all the upgrades together, rather than installing them on-by-one (which is slow!)
 &&  unattended-upgrade --verbose --no-minimal-upgrade-steps \
+# Install extra packages
+&&  apt-get install -y --no-install-recommends inkscape lilypond python3-pygments aspell aspell-\* \
 # install Node.js https://github.com/nodesource/distributions#nodejs
 &&  mkdir -p /etc/apt/keyrings \
 &&  curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
@@ -80,26 +92,9 @@ RUN mkdir /install-tl-unx \
 COPY fonts/. /usr/local/share/fonts/
 RUN ln -s /usr/local/texlive/${TEXLIVE_VERSION}/texmf-var/fonts/conf/texlive-fontconfig.conf /etc/fonts/conf.d/09-texlive-fonts.conf &&  fc-cache -f -v
 
-# Set up overleaf user and home directory
-# -----------------------------------------
-RUN adduser --system --group --home /overleaf --no-create-home overleaf && \
-	mkdir -p /var/lib/overleaf && \
-	chown www-data:www-data /var/lib/overleaf && \
-	mkdir -p /var/log/overleaf && \
-	chown www-data:www-data /var/log/overleaf && \
-	mkdir -p /var/lib/overleaf/data/template_files && \
-	chown www-data:www-data /var/lib/overleaf/data/template_files
-
 # Copy Latexmkrc
 # --------------
 COPY server-ce/config/latexmkrc /usr/local/share/latexmk/LatexMk
-
-# Install extra packages
-# ----------------------
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked true \
-    apt-get update && \
-    apt-get install -y --no-install-recommends inkscape lilypond python3-pygments aspell aspell-\*
 
 # Enable shell-escape by default
 # ------------------------------
