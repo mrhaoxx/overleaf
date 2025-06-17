@@ -22,7 +22,7 @@ export default {
       for (const body of responses) {
         if (!body) continue
         try {
-          const result = bibParse(body);
+          const result = bibParse(body.replaceAll(/month.*,/gi, ""));
           const resultKeys = Object.keys(result);
           keys.push(...resultKeys);
         } catch(error) {
