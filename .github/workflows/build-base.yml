@@ -13,22 +13,29 @@ on:
         required: true
         default: false
         type: boolean
-
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: mrhaoxx/sharelatex-base
+  REGISTRY: ${{ env.REGISTRY }}
+  IMAGE_NAME: ${{ env.IMAGE_NAME }}
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        platform: [amd64, arm64]
+        version: ["latest",2024]
+        include:
+          - platform: amd64
+            runner: ubuntu-latest
+          - platform: arm64
+            runner: ubuntu-24.04-arm
+    outputs:
+      year: ${{ steps.date.outputs.year }}
     permissions:
       contents: read
       packages: write
       attestations: write
       id-token: write
-    strategy:
-      matrix:
-        version: ["latest",2022,2020]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -65,15 +72,15 @@ jobs:
           push: true
           context: ${{ github.workspace }}
           file: ${{ github.workspace }}/server-ce/Dockerfile-base
-          #platforms: linux/amd64    
+          platforms: linux/${{ matrix.platform }}    
           tags: |
-            ghcr.io/mrhaoxx/sharelatex-base:${{ matrix.version }}
-            ghcr.io/mrhaoxx/sharelatex-base:${{ matrix.version }}.${{ inputs.revision }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}-${{ matrix.platform }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}.${{ inputs.revision }}-${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: |
-            type=registry,ref=ghcr.io/mrhaoxx/sharelatex-base:${{ matrix.version }}.${{ inputs.revision }}
-            type=registry,ref=ghcr.io/mrhaoxx/sharelatex-base:${{ matrix.version }}
-            type=registry,ref=ghcr.io/mrhaoxx/sharelatex-base:latest
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}.${{ inputs.revision }}-${{ matrix.platform }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}-${{ matrix.platform }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-${{ matrix.platform }}
           cache-to: type=inline
       - name: Build and push
         if: ${{ matrix.version != 'latest' && ! inputs.cache }}
@@ -86,10 +93,10 @@ jobs:
           push: true
           context: ${{ github.workspace }}
           file: ${{ github.workspace }}/server-ce/Dockerfile-base
-          #platforms: linux/amd64    
+          platforms: linux/${{ matrix.platform }}    
           tags: |
-            ghcr.io/mrhaoxx/sharelatex-base:${{ matrix.version }}
-            ghcr.io/mrhaoxx/sharelatex-base:${{ matrix.version }}.${{ inputs.revision }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}-${{ matrix.platform }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}.${{ inputs.revision }}-${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-to: type=inline
       - name: Get current year
@@ -107,16 +114,16 @@ jobs:
           push: true
           context: ${{ github.workspace }}
           file: ${{ github.workspace }}/server-ce/Dockerfile-base
-          #platforms: linux/amd64    
+          platforms: linux/${{ matrix.platform }}  
           tags: |
-            ghcr.io/mrhaoxx/sharelatex-base:latest
-            ghcr.io/mrhaoxx/sharelatex-base:${{ steps.date.outputs.year }}.${{ inputs.revision }}
-            ghcr.io/mrhaoxx/sharelatex-base:${{ steps.date.outputs.year }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-${{ matrix.platform }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.date.outputs.year }}.${{ inputs.revision }}-${{ matrix.platform }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.date.outputs.year }}-${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: |
-            type=registry,ref=ghcr.io/mrhaoxx/sharelatex-base:${{ steps.date.outputs.year }}.${{ inputs.revision }}
-            type=registry,ref=ghcr.io/mrhaoxx/sharelatex-base:${{ steps.date.outputs.year }}
-            type=registry,ref=ghcr.io/mrhaoxx/sharelatex-base:latest
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.date.outputs.year }}.${{ inputs.revision }}-${{ matrix.platform }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.date.outputs.year }}-${{ matrix.platform }}
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-${{ matrix.platform }}
           cache-to: type=inline
       - name: Build and push
         if: ${{ matrix.version == 'latest' && !inputs.cache }}
@@ -129,10 +136,84 @@ jobs:
           push: true
           context: ${{ github.workspace }}
           file: ${{ github.workspace }}/server-ce/Dockerfile-base
-          #platforms: linux/amd64    
+          platforms: linux/${{ matrix.platform }}  
           tags: |
-            ghcr.io/mrhaoxx/sharelatex-base:latest
-            ghcr.io/mrhaoxx/sharelatex-base:${{ steps.date.outputs.year }}.${{ inputs.revision }}
-            ghcr.io/mrhaoxx/sharelatex-base:${{ steps.date.outputs.year }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest-${{ matrix.platform }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.date.outputs.year }}.${{ inputs.revision }}-${{ matrix.platform }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.date.outputs.year }}-${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-to: type=inline
+
+  create-manifest:
+    strategy:
+      matrix:
+        version: ["latest",2024]
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Create and push manifest
+        if: ${{ matrix.version != 'latest' }}
+        run: |
+          docker manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}-amd64 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}-arm64
+          
+          docker manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}.${{ inputs.revision }} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}-amd64 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}-arm64
+
+          docker manifest annotate ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}-amd64 --arch amd64
+          docker manifest annotate ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}-arm64 --arch arm64
+          
+          docker manifest annotate ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}.${{ inputs.revision }} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}-amd64 --arch amd64
+          docker manifest annotate ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}.${{ inputs.revision }} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}-arm64 --arch arm64
+
+          docker manifest push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}.${{ inputs.revision }}
+          docker manifest push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ matrix.version }}
+      - name: Create and push manifest for latest version
+        if: ${{ matrix.version == 'latest' }}
+        run: |
+          docker manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{needs.build-and-push.outputs.year}} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{needs.build-and-push.outputs.year}}-amd64 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{needs.build-and-push.outputs.year}}-arm64
+          
+          docker manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{needs.build-and-push.outputs.year}}.${{ inputs.revision }} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{needs.build-and-push.outputs.year}}-amd64 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{needs.build-and-push.outputs.year}}-arm64
+          
+          docker manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{needs.build-and-push.outputs.year}}-amd64 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{needs.build-and-push.outputs.year}}-arm64
+
+          docker manifest annotate ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{needs.build-and-push.outputs.year}} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{needs.build-and-push.outputs.year}}-amd64 --arch amd64
+          docker manifest annotate ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{needs.build-and-push.outputs.year}} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{needs.build-and-push.outputs.year}}-arm64 --arch arm64
+          
+          docker manifest annotate ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{needs.build-and-push.outputs.year}}.${{ inputs.revision }} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{needs.build-and-push.outputs.year}}-amd64 --arch amd64
+          docker manifest annotate ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{needs.build-and-push.outputs.year}}.${{ inputs.revision }} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{needs.build-and-push.outputs.year}}-arm64 --arch arm64
+
+          docker manifest annotate ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{needs.build-and-push.outputs.year}}-amd64 --arch amd64
+          docker manifest annotate ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{needs.build-and-push.outputs.year}}-arm64 --arch arm64
+
+          docker manifest push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{needs.build-and-push.outputs.year}}.${{ inputs.revision }}
+          docker manifest push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{needs.build-and-push.outputs.year}}
+          docker manifest push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
